@@ -102,6 +102,8 @@ export default function Home() {
       const tenantName = localStorage.getItem('tenant_name');
       const tenantPhone = localStorage.getItem('tenant_phone');
       const tenantUnitId = localStorage.getItem('tenant_unit_id');
+      const tenantId = localStorage.getItem('tenant_id');
+      const propertyId = localStorage.getItem('property_id');
       const sessionId = getOrCreateSessionId();
 
       const payload: any = {
@@ -117,6 +119,22 @@ export default function Home() {
         console.log('Including unit_id in webhook payload:', tenantUnitId);
       } else {
         console.warn('No unit_id found in localStorage');
+      }
+
+      // Include tenant_id if available
+      if (tenantId) {
+        payload.tenantId = tenantId;
+        console.log('Including tenant_id in webhook payload:', tenantId);
+      } else {
+        console.warn('No tenant_id found in localStorage');
+      }
+
+      // Include property_id if available
+      if (propertyId) {
+        payload.propertyId = propertyId;
+        console.log('Including property_id in webhook payload:', propertyId);
+      } else {
+        console.warn('No property_id found in localStorage');
       }
 
       console.log('Webhook payload:', payload);
@@ -196,6 +214,9 @@ export default function Home() {
   const handleLogout = () => {
     localStorage.removeItem('tenant_name');
     localStorage.removeItem('tenant_phone');
+    localStorage.removeItem('tenant_unit_id');
+    localStorage.removeItem('tenant_id');
+    localStorage.removeItem('property_id');
     navigate('/login');
   };
 

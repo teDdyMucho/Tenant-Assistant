@@ -22,7 +22,7 @@ export default function Otp() {
     try {
       const { data, error: supabaseError } = await supabase
         .from('tenant_reg')
-        .select('name, email, number, otp, unit_id')
+        .select('name, email, number, otp, unit_id, tenant_id, property_id')
         .eq('otp', otp.trim())
         .maybeSingle();
 
@@ -44,6 +44,20 @@ export default function Otp() {
         console.log('Unit ID stored from OTP:', data.unit_id);
       } else {
         console.warn('No unit_id present on OTP verification record');
+      }
+
+      if (data.tenant_id) {
+        localStorage.setItem('tenant_id', data.tenant_id as string);
+        console.log('Tenant ID stored from OTP:', data.tenant_id);
+      } else {
+        console.warn('No tenant_id present on OTP verification record');
+      }
+
+      if (data.property_id) {
+        localStorage.setItem('property_id', data.property_id as string);
+        console.log('Property ID stored from OTP:', data.property_id);
+      } else {
+        console.warn('No property_id present on OTP verification record');
       }
 
       navigate('/home');
