@@ -16,10 +16,7 @@ interface Message {
   options?: AiOption[];
 }
 
-const getOrCreateSessionId = () => {
-  const existing = localStorage.getItem('tenant_session_id');
-  if (existing) return existing;
-
+const createNewSessionId = () => {
   const newId = `sess_${Math.random().toString(36).slice(2)}_${Date.now()}`;
   localStorage.setItem('tenant_session_id', newId);
   return newId;
@@ -37,6 +34,23 @@ export default function Home() {
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const [selectedOptions, setSelectedOptions] = useState<Record<number, string>>({});
+  const [sessionId] = useState(() => createNewSessionId());
+
+  // Log current localStorage data on component mount for debugging
+  useEffect(() => {
+    console.log('=== Home Page Mounted - Current localStorage Data ===');
+    console.log('tenant_name:', localStorage.getItem('tenant_name'));
+    console.log('tenant_phone:', localStorage.getItem('tenant_phone'));
+    console.log('tenant_email:', localStorage.getItem('tenant_email'));
+    console.log('tenant_user_id:', localStorage.getItem('tenant_user_id'));
+    console.log('tenant_unit_id:', localStorage.getItem('tenant_unit_id'));
+    console.log('tenant_id:', localStorage.getItem('tenant_id'));
+    console.log('tenant_tenant_id:', localStorage.getItem('tenant_tenant_id'));
+    console.log('property_id:', localStorage.getItem('property_id'));
+    console.log('occupancy_id:', localStorage.getItem('occupancy_id'));
+    console.log('sessionId:', sessionId);
+    console.log('===================================================');
+  }, [sessionId]);
 
   const parseAiOptions = (text: string): AiOption[] => {
     const lower = text.toLowerCase();
@@ -99,12 +113,16 @@ export default function Home() {
     let aiText: string | null = null;
 
     try {
+      // Always fetch fresh data from localStorage
       const tenantName = localStorage.getItem('tenant_name');
       const tenantPhone = localStorage.getItem('tenant_phone');
+      const tenantEmail = localStorage.getItem('tenant_email');
+      const tenantUserId = localStorage.getItem('tenant_user_id');
       const tenantUnitId = localStorage.getItem('tenant_unit_id');
       const tenantId = localStorage.getItem('tenant_id');
+      const tenantTenantId = localStorage.getItem('tenant_tenant_id');
       const propertyId = localStorage.getItem('property_id');
-      const sessionId = getOrCreateSessionId();
+      const occupancyId = localStorage.getItem('occupancy_id');
 
       const payload: any = {
         message: text,
@@ -112,6 +130,20 @@ export default function Home() {
         phoneNumber: tenantPhone,
         sessionId,
       };
+
+      // Include email if available
+      if (tenantEmail) {
+        payload.email = tenantEmail;
+        console.log('Including email in webhook payload:', tenantEmail);
+      }
+
+      // Include UserId if available
+      if (tenantUserId) {
+        payload.UserId = tenantUserId;
+        console.log('Including UserId in webhook payload:', tenantUserId);
+      } else {
+        console.warn('No UserId found in localStorage');
+      }
 
       // Include unit_id if available
       if (tenantUnitId) {
@@ -129,12 +161,24 @@ export default function Home() {
         console.warn('No tenant_id found in localStorage');
       }
 
+      // Include tenant_tenant_id if available
+      if (tenantTenantId) {
+        payload.tenantTenantId = tenantTenantId;
+        console.log('Including tenant_tenant_id in webhook payload:', tenantTenantId);
+      }
+
       // Include property_id if available
       if (propertyId) {
         payload.propertyId = propertyId;
         console.log('Including property_id in webhook payload:', propertyId);
       } else {
         console.warn('No property_id found in localStorage');
+      }
+
+      // Include occupancy_id if available
+      if (occupancyId) {
+        payload.occupancyId = occupancyId;
+        console.log('Including occupancy_id in webhook payload:', occupancyId);
       }
 
       console.log('Webhook payload:', payload);
@@ -212,11 +256,22 @@ export default function Home() {
   };
 
   const handleLogout = () => {
+    // Clear all user data from localStorage
     localStorage.removeItem('tenant_name');
     localStorage.removeItem('tenant_phone');
+    localStorage.removeItem('tenant_email');
+    localStorage.removeItem('tenant_user_id');
     localStorage.removeItem('tenant_unit_id');
     localStorage.removeItem('tenant_id');
+    localStorage.removeItem('tenant_tenant_id');
+    localStorage.removeItem('tenant_fname');
+    localStorage.removeItem('tenant_lname');
+    localStorage.removeItem('tenant_address');
+    localStorage.removeItem('tenant_type');
     localStorage.removeItem('property_id');
+    localStorage.removeItem('occupancy_id');
+    localStorage.removeItem('tenant_session_id');
+    console.log('All user data cleared from localStorage');
     navigate('/login');
   };
 

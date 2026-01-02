@@ -1,66 +1,59 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/supabaseClient';
 
 export default function Register() {
   const [fullName, setFullName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [countryCode, setCountryCode] = useState('+63');
+  const [countryCode, setCountryCode] = useState('+1');
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
+  const [showErrorPopup, setShowErrorPopup] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const fetchUnitIdFromSupabase = async (email: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('tenant_reg')
-        .select('unit_id')
-        .eq('email', email)
-        .single();
-
-      if (error) {
-        console.error('Error fetching unit_id from Supabase (register):', error);
-        return null;
-      }
-
-      return data?.unit_id || null;
-    } catch (error) {
-      console.error('Error fetching unit_id from Supabase (register):', error);
-      return null;
-    }
-  };
-
   const handleRegister = async () => {
+    // Prevent duplicate submissions
+    if (loading) {
+      console.log('Registration already in progress, ignoring click');
+      return;
+    }
+
     setError('');
+    setShowErrorPopup(false);
 
     if (!fullName.trim()) {
       setError('Please enter your full name');
+      setShowErrorPopup(true);
       return;
     }
 
     if (!email.trim()) {
       setError('Please enter your email');
+      setShowErrorPopup(true);
       return;
     }
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       setError('Please enter a valid email address');
+      setShowErrorPopup(true);
       return;
     }
 
     if (!phoneNumber.trim()) {
       setError('Please enter your phone number');
+      setShowErrorPopup(true);
       return;
     }
 
     if (!/^\d+$/.test(phoneNumber)) {
       setError('Phone number must contain only digits');
+      setShowErrorPopup(true);
       return;
     }
 
     if (phoneNumber.length < 6) {
       setError('Phone number must be at least 6 digits');
+      setShowErrorPopup(true);
       return;
     }
 
@@ -85,56 +78,69 @@ export default function Register() {
         }
       );
 
+      const data = await response.json().catch(() => null);
+
+      // Handle HTTP errors after parsing response
       if (!response.ok) {
+        // Check if it's a duplicate error
+        if (data && (data.Error || data.error)) {
+          const errorMsg = data.Error || data.error;
+          if (errorMsg.toLowerCase().includes('duplicate')) {
+            setError('This account already exists. Please try logging in instead.');
+            setShowErrorPopup(true);
+            return;
+          }
+          setError(errorMsg);
+          setShowErrorPopup(true);
+          return;
+        }
         throw new Error('Failed to register. Please try again.');
       }
 
-      const data = await response.json().catch(() => null);
+      // Check for success status
+      if (data && (data.status === 'Success' || data.Status === 'Success')) {
+        localStorage.setItem('tenant_name', fullName);
+        localStorage.setItem('tenant_phone', internationalPhone);
+        localStorage.setItem('tenant_email', email);
 
-      // Detect error payloads like { "Error": "Error" } or an array of them
-      let isErrorResponse = false;
-
-      if (data) {
-        if (Array.isArray(data) && data.length > 0) {
-          const first = data[0] as any;
-          if (first && (first.Error === 'Error' || first.error === 'Error')) {
-            isErrorResponse = true;
-          }
-        } else if (
-          (data as any).Error === 'Error' ||
-          (data as any).error === 'Error'
-        ) {
-          isErrorResponse = true;
+        // Store UserId from registration response
+        if (data.UserId || data.userId) {
+          localStorage.setItem('tenant_user_id', data.UserId || data.userId);
+          console.log('User ID stored:', data.UserId || data.userId);
+        } else {
+          console.warn('No UserId in registration response');
         }
-      }
 
-      if (isErrorResponse) {
-        setError(
-          'It looks like you are not using your registered tenant email. Please use your tenant email and try again.'
-        );
+        navigate('/otp');
         return;
       }
 
-      localStorage.setItem('tenant_name', fullName);
-      localStorage.setItem('tenant_phone', internationalPhone);
-      localStorage.setItem('tenant_email', email);
-
-      // Fetch unit_id from Supabase using unique email
-      const unitId = await fetchUnitIdFromSupabase(email);
-      if (unitId) {
-        localStorage.setItem('tenant_unit_id', unitId);
-        console.log('Unit ID stored:', unitId);
-      } else {
-        console.warn('No unit_id found for user');
+      // Detect error payloads like { "Error": "message" } or an array of them
+      if (data) {
+        if (Array.isArray(data) && data.length > 0) {
+          const first = data[0] as any;
+          if (first && (first.Error || first.error)) {
+            setError(first.Error || first.error);
+            setShowErrorPopup(true);
+            return;
+          }
+        } else if ((data as any).Error || (data as any).error) {
+          setError((data as any).Error || (data as any).error);
+          setShowErrorPopup(true);
+          return;
+        }
       }
 
-      navigate('/otp');
+      // If we reach here, response was not success and not a known error
+      setError('Registration failed. Please try again.');
+      setShowErrorPopup(true);
     } catch (err) {
       setError(
         err instanceof Error
           ? err.message
           : 'An unexpected error occurred. Please try again.'
       );
+      setShowErrorPopup(true);
     } finally {
       setLoading(false);
     }
@@ -236,21 +242,49 @@ export default function Register() {
               </div>
             </div>
 
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-                {error}
-              </div>
-            )}
 
             <button
               onClick={handleRegister}
-              className="w-full bg-blue-500 text-white py-3 rounded-lg font-medium hover:bg-blue-600 transition-colors shadow-md"
+              disabled={loading}
+              className="w-full bg-blue-500 text-white py-3 rounded-lg font-medium hover:bg-blue-600 transition-colors shadow-md disabled:bg-gray-300 disabled:cursor-not-allowed"
             >
-              Log In
+              {loading ? 'Registering...' : 'Register'}
             </button>
           </div>
         </div>
       </div>
+
+      {showErrorPopup && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full">
+            <div className="flex flex-col items-center text-center space-y-4">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
+                <svg
+                  className="w-10 h-10 text-red-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                  />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900">Error</h3>
+              <p className="text-red-600 font-medium">{error}</p>
+              <button
+                onClick={() => setShowErrorPopup(false)}
+                className="w-full bg-red-600 text-white py-3 rounded-lg font-medium hover:bg-red-700 transition-colors shadow-md"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
