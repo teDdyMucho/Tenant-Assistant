@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { LogOut } from 'lucide-react';
 import ChatBubble from '../components/ChatBubble';
 import ChatInput from '../components/ChatInput';
+import TypingIndicator from '../components/TypingIndicator';
 
 interface AiOption {
   value: string;
@@ -31,6 +32,7 @@ export default function Home() {
     },
   ]);
   const [messageIdCounter, setMessageIdCounter] = useState(2);
+  const [isAiTyping, setIsAiTyping] = useState(false);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const [selectedOptions, setSelectedOptions] = useState<Record<number, string>>({});
@@ -95,7 +97,7 @@ export default function Home() {
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [messages, isAiTyping]);
 
   const handleSendMessage = async (text: string) => {
     const userId = messageIdCounter;
@@ -109,6 +111,9 @@ export default function Home() {
 
     setMessages((prev) => [...prev, userMessage]);
     setMessageIdCounter((prev) => prev + 2);
+    
+    // Show typing indicator
+    setIsAiTyping(true);
 
     let aiText: string | null = null;
 
@@ -245,6 +250,9 @@ export default function Home() {
     };
 
     setMessages((prev) => [...prev, aiMessage]);
+    
+    // Hide typing indicator
+    setIsAiTyping(false);
   };
 
   const handleOptionClick = (messageId: number, value: string) => {
@@ -310,7 +318,7 @@ export default function Home() {
 
       <div
         ref={chatContainerRef}
-        className="flex-1 overflow-y-auto px-4 py-6 space-y-4"
+        className="flex-1 overflow-y-auto px-4 py-6 space-y-2"
         style={{ maxHeight: 'calc(100vh - 140px)' }}
       >
         {messages.map((message) => (
@@ -328,6 +336,7 @@ export default function Home() {
             }
           />
         ))}
+        {isAiTyping && <TypingIndicator />}
       </div>
 
       <ChatInput onSend={handleSendMessage} />
