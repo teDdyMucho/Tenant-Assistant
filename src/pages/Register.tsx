@@ -248,7 +248,7 @@ export default function Register() {
               disabled={loading}
               className="w-full bg-blue-500 text-white py-3 rounded-lg font-medium hover:bg-blue-600 transition-colors shadow-md disabled:bg-gray-300 disabled:cursor-not-allowed"
             >
-              {loading ? 'Registering...' : 'Register'}
+              {loading ? 'Logging in...' : 'Log in'}
             </button>
           </div>
         </div>

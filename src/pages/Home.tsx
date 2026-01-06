@@ -37,6 +37,7 @@ export default function Home() {
   const navigate = useNavigate();
   const [selectedOptions, setSelectedOptions] = useState<Record<number, string>>({});
   const [sessionId] = useState(() => createNewSessionId());
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   // Log current localStorage data on component mount for debugging
   useEffect(() => {
@@ -307,7 +308,7 @@ export default function Home() {
             </div>
           </div>
           <button
-            onClick={handleLogout}
+            onClick={() => setShowLogoutConfirm(true)}
             className="text-gray-200 hover:text-red-400 transition-colors"
             title="Logout"
           >
@@ -340,6 +341,32 @@ export default function Home() {
       </div>
 
       <ChatInput onSend={handleSendMessage} />
+
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm">
+            <h3 className="text-lg font-semibold text-gray-900">Log out?</h3>
+            <p className="text-gray-600 mt-2">You will be signed out of Tenant Assistant.</p>
+            <div className="mt-6 grid grid-cols-2 gap-3">
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                className="w-full py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setShowLogoutConfirm(false);
+                  handleLogout();
+                }}
+                className="w-full py-2.5 rounded-lg bg-red-600 text-white hover:bg-red-700 shadow"
+              >
+                Log out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

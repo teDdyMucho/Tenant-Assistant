@@ -159,12 +159,6 @@ export default function Login() {
             </button>
 
             <div className="text-center">
-              <button
-                onClick={() => navigate('/register')}
-                className="text-sm text-blue-500 hover:text-blue-600 transition-colors"
-              >
-                Don't have an account? Register here
-              </button>
             </div>
           </div>
         </div>
